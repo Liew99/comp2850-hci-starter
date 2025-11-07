@@ -1,108 +1,318 @@
-# Running the Week 6 HCI labs in Codespaces and IntelliJ
+# Development Environment Setup for COMP2850 HCI
 
-This guide shows you how to build and run the Ktor + Pebble starter in two environments our cohort uses most: **GitHub Codespaces** (cloud) and **IntelliJ IDEA** (local). Follow the path that matches your setup; try both if you want to double-check parity.
+This guide shows you how to build and run the Ktor + Pebble starter in **three environments**, listed in order of preference:
 
----
+1. **Local machine** (IntelliJ IDEA or VSCode) - **Recommended**
+2. **University lab** (RHEL9 with VSCode) - **Preferred for on-campus work**
+3. **GitHub Codespaces** - **Fallback if local setup fails**
 
-## 1. Before you start
-- Repository cloned or forked on GitHub.
-- Java 17 available (Codespaces ships with it; on your machine install Temurin 17 or OpenJDK 17).
-- Gradle wrapper (`./gradlew`) is already part of the repo—do not install Gradle globally.
-
-You will run the Ktor app via `./gradlew run`. That task compiles the Kotlin code, starts the embedded server on port `8080`, and serves the Pebble templates you edit during the lab.
+Choose the option that works best for you. Most students use local IntelliJ or university labs.
 
 ---
 
-## 2. GitHub Codespaces walkthrough
+## Before You Start
 
-### 2.1 Launch a Codespace
-1. Open the repository on GitHub.
-2. Click **Code → Codespaces → Create codespace on main** (or pick the branch you need).
-3. Wait for the container to build and VS Code in the browser to appear (first build ~1–2 minutes).
+**Requirements**:
+- Repository cloned or forked from GitHub
+- **Java JDK 17 minimum, 19+ preferred** (Temurin, OpenJDK, or Azul Zulu)
+  - Check version: `java -version`
+  - If <17, download from [Adoptium](https://adoptium.net/) or [Azul](https://www.azul.com/downloads/)
+- Gradle wrapper (`./gradlew`) is included in repo - **do not install Gradle globally**
 
-### 2.2 Terminal, build, run
+You'll run the Ktor app via `./gradlew run`. This compiles Kotlin code, starts the embedded server on port `8080`, and serves your Pebble templates.
+
+---
+
+## Option 1: Local Machine (IntelliJ IDEA) - Recommended
+
+### 1.1 Clone and Open
+
+1. Clone the repo locally:
+   ```bash
+   git clone git@github.com:<org>/comp2850-hci-starter.git
+   cd comp2850-hci-starter
+   ```
+2. Launch **IntelliJ IDEA** (Community or Ultimate)
+3. Choose **Open** → select the project directory
+4. IntelliJ detects the Gradle project automatically - accept default settings
+
+### 1.2 Configure JDK & Gradle
+
+- **Check JDK**: `File → Project Structure → Project → SDK`
+  - Should be **JDK 17 minimum, 19+ preferred**
+  - If not available, click **Add SDK → Download JDK** → choose Temurin/Azul/OpenJDK 21 (latest LTS)
+- **Gradle JVM**: In Gradle tool window (right sidebar), click wrench icon → **Gradle JVM** → select same JDK (17+)
+- Wait for Gradle sync to complete (progress bar in bottom-right status bar)
+
+### 1.3 Run the Application
+
+1. Open `src/main/kotlin/Application.kt` (or `App.kt` depending on scaffold)
+2. Click green play icon next to `fun main()` → **Run 'ApplicationKt'**
+3. Run tool window shows server log - look for:
+   ```
+   Application started in X.XXX seconds.
+   Listening on: http://0.0.0.0:8080
+   ```
+4. Open browser: `http://localhost:8080/tasks`
+
+### 1.4 Develop and Refresh
+
+- **Template changes** (Pebble `.peb` files): Save file → refresh browser (`Ctrl/Cmd+R`)
+  - IntelliJ watches resource files automatically
+- **Kotlin changes** (routes, controllers): Stop server (`Ctrl+F2`) → rerun (`Ctrl+F5`)
+  - Or click green **Rerun** arrow in Run tool window
+
+### 1.5 Disable JavaScript for No-JS Testing
+
+**Chrome**:
+- DevTools (F12) → Console → three-dot menu → Settings → Debugger → Check "Disable JavaScript"
+- Reload page to test server-first path
+
+**Firefox**:
+- DevTools (F12) → Debugger → three-dot menu → Disable JavaScript
+
+Re-enable when testing HTMX enhancements.
+
+### 1.6 Run Tests (Optional)
+
+- **Gradle tool window**: Double-click **Tasks → verification → test**
+- **Or terminal**: `./gradlew test`
+
+### 1.7 Commit and Push
+
+- **IntelliJ UI**: `VCS → Commit` (`Ctrl+K`) → stage files → commit message → **Commit and Push** (`Ctrl+Shift+K`)
+- **Or terminal**:
+  ```bash
+  git add .
+  git commit -m "wk6: Implement task list view"
+  git push origin main
+  ```
+
+---
+
+## Option 2: Local Machine (VSCode) - Alternative
+
+### 2.1 Prerequisites
+
+- Install **Visual Studio Code**: [https://code.visualstudio.com/](https://code.visualstudio.com/)
+- Install **Java Extension Pack** (Extension ID: `vscjava.vscode-java-pack`)
+  - Includes Language Support for Java, Debugger, Maven/Gradle support
+- Ensure **JDK 17+** (preferably 19+) installed and in PATH
+
+### 2.2 Clone and Open
+
+1. Clone repo:
+   ```bash
+   git clone git@github.com:<org>/comp2850-hci-starter.git
+   cd comp2850-hci-starter
+   ```
+2. Open in VSCode: `code .` or **File → Open Folder**
+3. VSCode detects Gradle project - accept Java extension prompts
+
+### 2.3 Configure Java Version
+
+- Open Command Palette (`Ctrl+Shift+P`)
+- Search: **Java: Configure Java Runtime**
+- Set **Java 17+** (preferably 19+) for project
+- If JDK not listed, click **Configure** → point to JDK installation directory
+
+### 2.4 Run the Application
+
+**Terminal** (recommended):
 ```bash
 ./gradlew run
 ```
-- The first run downloads dependencies, so expect a short delay.
-- When the build finishes you’ll see `Application started…` with port `8080` in the terminal.
+- Server starts on port `8080`
+- Open browser: `http://localhost:8080/tasks`
 
-### 2.3 Preview the app
-1. Codespaces shows a **Ports** tab. When Gradle starts the server you’ll see port `8080` listed.
-2. Click the globe icon to open the forwarded port in a new browser tab (or use the `Open in Browser` button).
-3. The `Tasks` page should load. Leave this tab open while you work.
+**Or VSCode debugger**:
+- Create `.vscode/launch.json`:
+  ```json
+  {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "kotlin",
+        "request": "launch",
+        "name": "Run Ktor App",
+        "mainClass": "ApplicationKt",
+        "preLaunchTask": "gradle: build"
+      }
+    ]
+  }
+  ```
+- Press F5 to run with debugger attached
 
-### 2.4 Develop and hot-refresh
-- Edit templates under `src/main/re../../references/templates/…` or Kotlin under `src/main/kotlin/…`.
-- After saving, switch back to the preview tab and use the browser’s refresh (`Ctrl/Cmd+R`).
-- If you change Kotlin code you must stop (`Ctrl+C`) and re-run `./gradlew run` to pick up the changes.
+### 2.5 Develop and Refresh
 
-### 2.5 Disable JavaScript for parity checks
-- In the preview tab, open DevTools (F12), go to **Settings → Debugger → Disable JavaScript** (Chrome) or use the quick toggle in the **Command Palette** (`Ctrl+Shift+P`, search “Disable JavaScript”).
-- Reload the page to test the server-first path, then re-enable JavaScript for HTMX checks.
+- **Template changes**: Save → refresh browser
+- **Kotlin changes**: Stop terminal (`Ctrl+C`) → rerun `./gradlew run`
 
-### 2.6 Run tests (optional but recommended)
-```bash
-./gradlew test
-```
-Use this when we add linting or HTML validation later in the strand.
+### 2.6 Disable JavaScript for Testing
 
-### 2.7 Git workflow inside Codespaces
-- The VS Code UI has **Source Control** (left sidebar) for staging, committing, and pushing.
-- Preferred workflow: `git status` in the terminal, `git add …`, `git commit -m "wk6s1: …"`, then `git push origin <branch>`.
-
-When you close the browser tab, Codespaces pauses automatically. Reopen from GitHub to resume; the server command will need re-running.
+Same as IntelliJ instructions (browser DevTools settings).
 
 ---
 
-## 3. IntelliJ IDEA walkthrough (local machine)
+## Option 3: University Lab (RHEL9 with VSCode) - On-Campus Preferred
 
-### 3.1 Clone and open
-1. Clone the repo locally:
+### 3.1 Environment Details
+
+- **OS**: Red Hat Enterprise Linux 9 (RHEL9)
+- **IDE**: Visual Studio Code (pre-installed)
+- **Java**: Check version with `java -version` in terminal
+  - If <17, contact IT support or use local machine setup
+
+### 3.2 Setup Steps
+
+1. **Log in** to university lab machine
+2. **Open Terminal** (Applications → Terminal)
+3. **Check Java version**:
    ```bash
-   git clone git@github.com:<org>/comp2850_hci.git
-   cd comp2850_hci
+   java -version
+   # Should show 17 or higher
    ```
-2. Launch IntelliJ IDEA (Community or Ultimate) and choose **Open** → select the project directory.
-3. IntelliJ will detect the Gradle project; accept the default settings when prompted.
+4. **Clone repo**:
+   ```bash
+   cd ~/Documents  # or preferred location
+   git clone git@github.com:<org>/comp2850-hci-starter.git
+   cd comp2850-hci-starter
+   ```
+5. **Open in VSCode**:
+   ```bash
+   code .
+   ```
 
-### 3.2 Configure JDK & Gradle
-- Check the JDK: `File → Project Structure → Project → SDK` should point to a JDK 17 installation.
-- In the Gradle tool window, ensure **Gradle JVM** is also set to 17.
-- Wait for the Gradle sync to finish (status bar bottom-right).
+### 3.3 Run Application
 
-### 3.3 Apply the run configuration
-The project already has a `main` function (for example in `comp2850/App.kt`). To run it:
-1. Open `App.kt` (or `Application.kt` depending on the scaffold).
-2. Click the green gutter icon next to `fun main` → **Run 'AppKt'** (IntelliJ creates a run configuration automatically).
-3. The Run tool window shows the server log; look for `Application started…` on port `8080`.
+```bash
+./gradlew run
+```
+- Server starts on `localhost:8080`
+- Open Firefox (pre-installed): `http://localhost:8080/tasks`
 
-### 3.4 View the site
-- Open your browser (Chrome/Firefox) and go to `http://localhost:8080/tasks`.
-- Leave the server running while you work. If you modify Kotlin files, press the green **Rerun** arrow or `Ctrl+F5` in the Run tool window to restart quickly.
+### 3.4 Development Workflow
 
-### 3.5 Edit templates and Kotlin together
-- IntelliJ watches resource files; you can edit `templates/base.peb`, `templates/tasks/index.peb`, etc., and just refresh the browser.
-- For Kotlin changes (routes, repositories) restart the run configuration.
+Same as local VSCode setup (Section 2.5):
+- Template changes: Save → refresh browser
+- Kotlin changes: Stop terminal → rerun `./gradlew run`
 
-### 3.6 Toggle JavaScript for parity checks
-- Use Chrome/Firefox DevTools → **Settings → Disable JavaScript** or install the “Disable JavaScript” extension. Repeat the same no-JS workflow as in Codespaces.
+### 3.5 Important Notes
 
-### 3.7 Run tests locally
-- In the Gradle tool window, double-click **Tasks → verification → test** or run `./gradlew test` in IntelliJ’s integrated terminal.
-
-### 3.8 Commit and push
-- Use `VCS → Commit` (`Ctrl+K`) to stage, review diffs, and commit.
-- Push with `Ctrl+Shift+K` once you are ready to share your Week 6 work or open a PR.
+- **File permissions**: Lab machines may have restricted home directories. Work in `~/Documents` or assigned project space.
+- **Network access**: University network may block some external resources. If Gradle dependencies fail to download, try lab WiFi (not ethernet) or contact IT.
+- **Session persistence**: Log out properly to avoid leaving ports open. Kill background processes: `pkill -f gradle` before logging out.
 
 ---
 
-## 4. Quick troubleshooting
+## Option 4: GitHub Codespaces - Fallback Only
+
+**Use Codespaces only if**:
+- Local machine setup fails (incompatible OS, no admin rights)
+- University labs unavailable
+- Temporary access needed (e.g., working from borrowed machine)
+
+### 4.1 Launch Codespace
+
+1. Open repository on GitHub
+2. Click **Code → Codespaces → Create codespace on main**
+3. Wait for container to build (~1-2 minutes first time)
+4. VSCode in browser appears
+
+### 4.2 Terminal, Build, Run
+
+```bash
+./gradlew run
+```
+- First run downloads dependencies (may take 2-3 minutes)
+- Look for `Application started` with port `8080`
+
+### 4.3 Preview the App
+
+1. **Ports** tab (bottom panel) shows port `8080` when server starts
+2. Click globe icon → opens forwarded port in new browser tab
+3. Leave preview tab open while working
+
+### 4.4 Develop and Refresh
+
+- Edit templates under `src/main/resources/templates/` or Kotlin under `src/main/kotlin/`
+- Save → refresh preview tab
+- **Kotlin changes**: Stop server (`Ctrl+C`) → rerun `./gradlew run`
+
+### 4.5 Disable JavaScript
+
+- Preview tab → DevTools (F12) → Settings → Disable JavaScript
+- Reload page → test server-first path → re-enable for HTMX checks
+
+### 4.6 Git Workflow
+
+- **VSCode UI**: Source Control (left sidebar) for staging/committing/pushing
+- **Or terminal**: `git add .`, `git commit -m "..."`, `git push origin main`
+
+### 4.7 Important Codespaces Limitations
+
+- **Idle timeout**: Codespaces pause after 30 minutes inactivity. Reopen from GitHub → re-run server.
+- **Storage limits**: Free tier has limited hours/month. Don't leave Codespaces running when not actively working.
+- **Performance**: Slower than local machine (network latency for every request)
+- **Cost**: Paid tiers required for heavy use. University may not reimburse.
+
+**Recommendation**: Use Codespaces for emergency access only. Switch to local/lab setup ASAP.
+
+---
+
+## Quick Troubleshooting
+
 | Symptom | Fix |
 |---------|-----|
-| `Address already in use` | Another process is on port 8080. Stop previous runs or change the port in `application.conf` temporarily. |
-| `Unsupported major.minor version` | IntelliJ/Codespaces is using the wrong JDK. Switch to 17. |
-| Page blank / 500 errors | Check the server log; Pebble usually reports the template file + line number. |
-| HTMX not firing | Confirm you added the `hx-*` attributes and that the server returns HTML (not JSON). |
+| `Address already in use: bind` | Port 8080 already taken. Stop previous server (`pkill -f gradle`) or change port in `src/main/resources/application.conf` (add `ktor.deployment.port = 8081`) |
+| `Unsupported class file major version 61` | Wrong JDK. Code compiled with Java 17+ but running with older JDK. Check `java -version` and IDE/Gradle JVM settings. |
+| `Unsupported major.minor version` | Same as above - upgrade to JDK 17 minimum, 19+ preferred. |
+| Page blank / 500 errors | Check server log. Pebble reports template file + line number for syntax errors. |
+| HTMX not firing | 1) Confirm `<script src="https://unpkg.com/htmx.org@1.9.10"></script>` in `_layout.peb`, 2) Check `hx-*` attributes on elements, 3) Browser Network tab: request should return HTML (not JSON/404) |
+| Gradle build fails | Run `./gradlew clean build` to reset. If still fails, check `build.gradle.kts` for syntax errors. |
+| Port forwarding not working (Codespaces) | Ports tab → right-click `8080` → **Port Visibility → Public**. Re-open preview. |
+| Out of memory error | Increase Gradle heap: Add `org.gradle.jvmargs=-Xmx2048m` to `gradle.properties` |
 
-Document assumptions in your README or wrap-up if you deviate (e.g. using a different IDE). Keep verifying that both environments behave identically—that parity is part of our accessibility and evaluation story.
+---
+
+## Verification Checklist
+
+Before starting Week 6 labs, verify:
+
+- [ ] **Java version**: `java -version` shows 17 or higher (19+ preferred)
+- [ ] **Gradle runs**: `./gradlew --version` succeeds (uses wrapper, no global install needed)
+- [ ] **Server starts**: `./gradlew run` completes without errors
+- [ ] **Homepage loads**: `http://localhost:8080/tasks` shows task list (may be empty)
+- [ ] **Hot reload works**: Edit `src/main/resources/templates/tasks/index.peb` → save → refresh browser → changes appear
+- [ ] **No-JS fallback**: Disable JavaScript → reload → homepage still loads (server-rendered HTML)
+
+If all checks pass, you're ready for Week 6 Lab 1.
+
+---
+
+## IDE Preferences Summary
+
+**Recommended order**:
+1. **Local IntelliJ IDEA** - Best Kotlin/Gradle support, powerful debugger, free Community edition
+2. **Local VSCode** - Lightweight, good for template editing, decent Java/Kotlin support with extensions
+3. **University lab VSCode** - RHEL9 machines, pre-configured, good for on-campus work
+4. **Codespaces** - Cloud fallback, use only if local/lab options unavailable
+
+**Which should I choose?**
+- **Kotlin-heavy weeks** (routes, controllers): IntelliJ recommended (better autocomplete, refactoring)
+- **Template-heavy weeks** (Pebble HTML): VSCode or IntelliJ both fine
+- **Accessibility testing** (screen readers, keyboard): Local machine preferred (easier to run NVDA/VoiceOver)
+- **Quick fixes on the go**: Codespaces (but switch to local for extended work)
+
+**Can I switch environments mid-module?** Yes. Git keeps your code in sync. Clone repo in any environment and continue.
+
+---
+
+## Getting Help
+
+**Setup issues**:
+- **MS Teams**: COMP2850 forum → post error message + `java -version` + `./gradlew --version` output
+- **Office hours**: Staff can troubleshoot JDK/Gradle issues (check Teams for schedule)
+- **TAs in open labs**: Bragg 2.05 (check timetable for TA availability)
+
+**Best practice**: Get setup working in **Week 6 Session 1** (40-minute exploration time). Don't wait until Week 7 - you'll fall behind.
