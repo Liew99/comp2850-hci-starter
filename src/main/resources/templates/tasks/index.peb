@@ -20,18 +20,33 @@
   </form>
 </section>
 
-{# Task List - Week 6 (inline, no partials) #}
-{# TODO: Week 7 Lab 1 Activity 2 Step 4
-   Update this section to use conditional includes:
-   - Add {% if editingId and editingId == task.id %} check
-   - Include tasks/_edit.peb when editing
-   - Include tasks/_item.peb when viewing
-   - See mdbook for full implementation
-#}
-<section aria-labelledby="list-heading">
-  <h2 id="list-heading">Current tasks ({{ tasks | length }})</h2>
+{# NEW SECTION: Search / Filter Button #}
+<section aria-labelledby="filter-heading" style="margin-top: 2rem;">
+  <h2 id="filter-heading">Find tasks</h2>
+
+  <form id="filter-form"
+        action="/tasks/search"
+        method="get"
+        hx-get="/tasks/search"
+        hx-target="#task-list"
+        hx-swap="innerHTML">
+
+      <label for="q">Search tasks:</label>
+      <input type="text" id="q" name="q" placeholder="e.g., shopping">
+
+      <!-- NEW FILTER BUTTON -->
+      <button type="submit">Filter</button>
+
+  </form>
+</section>
+
+{# Task List #}
+<section aria-labelledby="list-heading" style="margin-top: 2rem;">
+  <h2 id="task-count">Current tasks ({{ tasks | length }})</h2>
+
   {# Minor Issue: Image without alt text for Week 7 Lab 2 discovery #}
   <img src="/static/img/icon.png" width="16" height="16">
+
   <ul id="task-list">
     {% for task in tasks %}
       <li id="task-{{ task.id }}">
@@ -48,4 +63,5 @@
     {% endfor %}
   </ul>
 </section>
-{% endblock %}
+
+{% endblock %}  

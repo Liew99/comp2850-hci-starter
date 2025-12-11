@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="/static/css/custom.css">
 
     {# HTMX for progressive enhancement #}
-    <script src="/static/js/htmx-1.9.12.min.js" defer></script>
+    <script src="/static/js/htmx-1.9.12.min.js"></script>
 </head>
 <body>
     {# Skip link for keyboard navigation (WCAG 2.4.1) #}

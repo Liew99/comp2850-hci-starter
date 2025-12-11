@@ -6,145 +6,213 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.sessions.*
 import io.pebbletemplates.pebble.PebbleEngine
+import utils.SessionData
+import utils.Logger
+import utils.generateRequestId
+import utils.ParticipantCounter
 import java.io.StringWriter
-
-/**
- * NOTE FOR NON-INTELLIJ IDEs (VSCode, Eclipse, etc.):
- * IntelliJ IDEA automatically adds imports as you type. If using a different IDE,
- * you may need to manually add imports. The commented imports below show what you'll need
- * for future weeks. Uncomment them as needed when following the lab instructions.
- *
- * When using IntelliJ: You can ignore the commented imports below - your IDE will handle them.
- */
-
-// Week 7+ imports (inline edit, toggle completion):
-// import model.Task               // When Task becomes separate model class
-// import model.ValidationResult   // For validation errors
-// import renderTemplate            // Extension function from Main.kt
-// import isHtmxRequest             // Extension function from Main.kt
-
-// Week 8+ imports (pagination, search, URL encoding):
-// import io.ktor.http.encodeURLParameter  // For query parameter encoding
-// import utils.Page                       // Pagination helper class
-
-// Week 9+ imports (metrics logging, instrumentation):
-// import utils.jsMode              // Detect JS mode (htmx/nojs)
-// import utils.logValidationError  // Log validation failures
-// import utils.timed               // Measure request timing
-
-// Note: Solution repo uses storage.TaskStore instead of data.TaskRepository
-// You may refactor to this in Week 10 for production readiness
-
-/**
- * Week 6 Lab 1: Simple task routes with HTMX progressive enhancement.
- *
- * **Teaching approach**: Start simple, evolve incrementally
- * - Week 6: Basic CRUD with Int IDs
- * - Week 7: Add toggle, inline edit
- * - Week 8: Add pagination, search
- */
+import kotlin.system.measureTimeMillis
 
 fun Route.taskRoutes() {
+
     val pebble =
-        PebbleEngine
-            .Builder()
+        PebbleEngine.Builder()
             .loader(
                 io.pebbletemplates.pebble.loader.ClasspathLoader().apply {
                     prefix = "templates/"
-                },
+                }
             ).build()
 
-    /**
-     * Helper: Check if request is from HTMX
-     */
-    fun ApplicationCall.isHtmx(): Boolean = request.headers["HX-Request"]?.equals("true", ignoreCase = true) == true
+    // Detect HTMX
+    fun ApplicationCall.isHtmx(): Boolean =
+        request.headers["HX-Request"]?.equals("true", ignoreCase = true) == true
 
-    /**
-     * GET /tasks - List all tasks
-     * Returns full page (no HTMX differentiation in Week 6)
-     */
+    fun jsMode(call: ApplicationCall): String =
+        if (call.isHtmx()) "on" else "off"
+
+    // 👇 FIXED — Auto-create P1, P2, P3… sessions
+    fun ApplicationCall.sessionId(): String {
+        var session = sessions.get<SessionData>()
+
+        if (session == null) {
+            val next = ParticipantCounter.next()
+            session = SessionData(id = "P$next")
+            sessions.set(session)
+        }
+
+        return session.id
+    }
+
+    // SIMPLE compatible timing function
+    fun timed(block: () -> Unit): Long = measureTimeMillis(block)
+
+    // ---------------------------------------------------------
+    // GET /tasks
+    // ---------------------------------------------------------
     get("/tasks") {
-        val model =
-            mapOf(
-                "title" to "Tasks",
-                "tasks" to TaskRepository.all(),
-            )
+        val model = mapOf(
+            "title" to "Tasks",
+            "tasks" to TaskRepository.all()
+        )
+
         val template = pebble.getTemplate("tasks/index.peb")
         val writer = StringWriter()
         template.evaluate(writer, model)
         call.respondText(writer.toString(), ContentType.Text.Html)
     }
 
-    /**
-     * POST /tasks - Add new task
-     * Dual-mode: HTMX fragment or PRG redirect
-     */
+    // ---------------------------------------------------------
+    // POST /tasks  (T1_add)
+    // ---------------------------------------------------------
     post("/tasks") {
+        val sessionId = call.sessionId()
+        val reqId = generateRequestId()
         val title = call.receiveParameters()["title"].orEmpty().trim()
 
+        // VALIDATION ERROR
         if (title.isBlank()) {
-            // Validation error handling
+            Logger.validationError(
+                sessionId = sessionId,
+                requestId = reqId,
+                taskCode = "T1_add",
+                outcome = "blank_title",
+                jsMode = jsMode(call)
+            )
+
             if (call.isHtmx()) {
-                val error = """<div id="status" hx-swap-oob="true" role="alert" aria-live="assertive">
-                    Title is required. Please enter at least one character.
-                </div>"""
-                return@post call.respondText(error, ContentType.Text.Html, HttpStatusCode.BadRequest)
+                return@post call.respondText(
+                    """<div id="status" hx-swap-oob="true">Title is required.</div>""",
+                    ContentType.Text.Html,
+                    HttpStatusCode.BadRequest
+                )
             } else {
-                // No-JS: redirect back (could add error query param)
                 call.response.headers.append("Location", "/tasks")
                 return@post call.respond(HttpStatusCode.SeeOther)
             }
         }
 
-        val task = TaskRepository.add(title)
-
-        if (call.isHtmx()) {
-            // Return HTML fragment for new task
-            val fragment = """<li id="task-${task.id}">
-                <span>${task.title}</span>
-                <form action="/tasks/${task.id}/delete" method="post" style="display: inline;"
-                      hx-post="/tasks/${task.id}/delete"
-                      hx-target="#task-${task.id}"
-                      hx-swap="outerHTML">
-                  <button type="submit" aria-label="Delete task: ${task.title}">Delete</button>
-                </form>
-            </li>"""
-
-            val status = """<div id="status" hx-swap-oob="true">Task "${task.title}" added successfully.</div>"""
-
-            return@post call.respondText(fragment + status, ContentType.Text.Html, HttpStatusCode.Created)
+        var newTaskId = -1
+        val ms = timed {
+            val task = TaskRepository.add(title)
+            newTaskId = task.id
         }
 
-        // No-JS: POST-Redirect-GET pattern (303 See Other)
+        // SUCCESS LOG
+        Logger.success(
+            sessionId = sessionId,
+            requestId = reqId,
+            taskCode = "T1_add",
+            durationMs = ms,
+            jsMode = jsMode(call)
+        )
+
+        if (call.isHtmx()) {
+
+            val li = """
+                <li id="task-$newTaskId">
+                    <span>$title</span>
+                    <form action="/tasks/$newTaskId/delete" method="post" style="display: inline;"
+                          hx-post="/tasks/$newTaskId/delete"
+                          hx-target="#task-$newTaskId"
+                          hx-swap="outerHTML">
+                        <button type="submit">Delete</button>
+                    </form>
+                </li>
+            """.trimIndent()
+
+            val status = """<div id="status" hx-swap-oob="true">Task added.</div>"""
+
+            val count = TaskRepository.all().size
+            val countFragment = """
+                <h2 id="task-count" hx-swap-oob="true">
+                    Current tasks ($count)
+                </h2>
+            """.trimIndent()
+
+            return@post call.respondText(li + status + countFragment, ContentType.Text.Html)
+        }
+
         call.response.headers.append("Location", "/tasks")
         call.respond(HttpStatusCode.SeeOther)
     }
 
-    /**
-     * POST /tasks/{id}/delete - Delete task
-     * Dual-mode: HTMX empty response or PRG redirect
-     */
+    // ---------------------------------------------------------
+    // POST /tasks/{id}/delete  (T2_delete)
+    // ---------------------------------------------------------
     post("/tasks/{id}/delete") {
-        val id = call.parameters["id"]?.toIntOrNull()
-        val removed = id?.let { TaskRepository.delete(it) } ?: false
+        val sessionId = call.sessionId()
+        val reqId = generateRequestId()
 
-        if (call.isHtmx()) {
-            val message = if (removed) "Task deleted." else "Could not delete task."
-            val status = """<div id="status" hx-swap-oob="true">$message</div>"""
-            // Return empty content to trigger outerHTML swap (removes the <li>)
-            return@post call.respondText(status, ContentType.Text.Html)
+        val id = call.parameters["id"]?.toIntOrNull()
+        if (id == null) {
+            Logger.validationError(
+                sessionId = sessionId,
+                requestId = reqId,
+                taskCode = "T2_delete",
+                outcome = "invalid_id",
+                jsMode = jsMode(call)
+            )
+            return@post call.respond(HttpStatusCode.BadRequest)
         }
 
-        // No-JS: POST-Redirect-GET pattern (303 See Other)
+        val ms = timed {
+            TaskRepository.delete(id)
+        }
+
+        Logger.success(
+            sessionId = sessionId,
+            requestId = reqId,
+            taskCode = "T2_delete",
+            durationMs = ms,
+            jsMode = jsMode(call)
+        )
+
+        if (call.isHtmx()) {
+            val status = """<div id="status" hx-swap-oob="true">Task deleted.</div>"""
+
+            val count = TaskRepository.all().size
+            val countFragment = """
+                <h2 id="task-count" hx-swap-oob="true">
+                    Current tasks ($count)
+                </h2>
+            """.trimIndent()
+
+            return@post call.respondText(status + countFragment, ContentType.Text.Html)
+        }
+
         call.response.headers.append("Location", "/tasks")
         call.respond(HttpStatusCode.SeeOther)
     }
 
-    // TODO: Week 7 Lab 1 Activity 2 Steps 2-5
-    // Add inline edit routes here
-    // Follow instructions in mdbook to implement:
-    // - GET /tasks/{id}/edit - Show edit form (dual-mode)
-    // - POST /tasks/{id}/edit - Save edits with validation (dual-mode)
-    // - GET /tasks/{id}/view - Cancel edit (HTMX only)
+    // ---------------------------------------------------------
+    // GET /tasks/search  (T3_filter)
+    // ---------------------------------------------------------
+    get("/tasks/search") {
+        val sessionId = call.sessionId()
+        val reqId = generateRequestId()
+
+        val query = call.request.queryParameters["q"]?.trim()?.lowercase().orEmpty()
+
+        lateinit var filtered: List<data.Task>
+        val ms = timed {
+            filtered = TaskRepository.all().filter { it.title.lowercase().contains(query) }
+        }
+
+        Logger.success(
+            sessionId = sessionId,
+            requestId = reqId,
+            taskCode = "T3_filter",
+            durationMs = ms,
+            jsMode = jsMode(call)
+        )
+
+        val model = mapOf("tasks" to filtered)
+        val template = pebble.getTemplate("tasks/_list.peb")
+        val writer = StringWriter()
+        template.evaluate(writer, model)
+
+        call.respondText(writer.toString(), ContentType.Text.Html)
+    }
 }
