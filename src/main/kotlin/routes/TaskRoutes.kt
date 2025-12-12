@@ -32,7 +32,7 @@ fun Route.taskRoutes() {
     fun jsMode(call: ApplicationCall): String =
         if (call.isHtmx()) "on" else "off"
 
-    // 👇 FIXED — Auto-create P1, P2, P3… sessions
+    // Auto-create participant sessions
     fun ApplicationCall.sessionId(): String {
         var session = sessions.get<SessionData>()
 
@@ -45,7 +45,7 @@ fun Route.taskRoutes() {
         return session.id
     }
 
-    // SIMPLE compatible timing function
+    // Timing helper
     fun timed(block: () -> Unit): Long = measureTimeMillis(block)
 
     // ---------------------------------------------------------
@@ -71,7 +71,6 @@ fun Route.taskRoutes() {
         val reqId = generateRequestId()
         val title = call.receiveParameters()["title"].orEmpty().trim()
 
-        // VALIDATION ERROR
         if (title.isBlank()) {
             Logger.validationError(
                 sessionId = sessionId,
@@ -80,17 +79,7 @@ fun Route.taskRoutes() {
                 outcome = "blank_title",
                 jsMode = jsMode(call)
             )
-
-            if (call.isHtmx()) {
-                return@post call.respondText(
-                    """<div id="status" hx-swap-oob="true">Title is required.</div>""",
-                    ContentType.Text.Html,
-                    HttpStatusCode.BadRequest
-                )
-            } else {
-                call.response.headers.append("Location", "/tasks")
-                return@post call.respond(HttpStatusCode.SeeOther)
-            }
+            return@post call.respond(HttpStatusCode.BadRequest)
         }
 
         var newTaskId = -1
@@ -99,40 +88,13 @@ fun Route.taskRoutes() {
             newTaskId = task.id
         }
 
-        // SUCCESS LOG
         Logger.success(
             sessionId = sessionId,
             requestId = reqId,
             taskCode = "T1_add",
-            durationMs = ms,
+            ms = ms,
             jsMode = jsMode(call)
         )
-
-        if (call.isHtmx()) {
-
-            val li = """
-                <li id="task-$newTaskId">
-                    <span>$title</span>
-                    <form action="/tasks/$newTaskId/delete" method="post" style="display: inline;"
-                          hx-post="/tasks/$newTaskId/delete"
-                          hx-target="#task-$newTaskId"
-                          hx-swap="outerHTML">
-                        <button type="submit">Delete</button>
-                    </form>
-                </li>
-            """.trimIndent()
-
-            val status = """<div id="status" hx-swap-oob="true">Task added.</div>"""
-
-            val count = TaskRepository.all().size
-            val countFragment = """
-                <h2 id="task-count" hx-swap-oob="true">
-                    Current tasks ($count)
-                </h2>
-            """.trimIndent()
-
-            return@post call.respondText(li + status + countFragment, ContentType.Text.Html)
-        }
 
         call.response.headers.append("Location", "/tasks")
         call.respond(HttpStatusCode.SeeOther)
@@ -165,22 +127,9 @@ fun Route.taskRoutes() {
             sessionId = sessionId,
             requestId = reqId,
             taskCode = "T2_delete",
-            durationMs = ms,
+            ms = ms,
             jsMode = jsMode(call)
         )
-
-        if (call.isHtmx()) {
-            val status = """<div id="status" hx-swap-oob="true">Task deleted.</div>"""
-
-            val count = TaskRepository.all().size
-            val countFragment = """
-                <h2 id="task-count" hx-swap-oob="true">
-                    Current tasks ($count)
-                </h2>
-            """.trimIndent()
-
-            return@post call.respondText(status + countFragment, ContentType.Text.Html)
-        }
 
         call.response.headers.append("Location", "/tasks")
         call.respond(HttpStatusCode.SeeOther)
@@ -193,18 +142,22 @@ fun Route.taskRoutes() {
         val sessionId = call.sessionId()
         val reqId = generateRequestId()
 
-        val query = call.request.queryParameters["q"]?.trim()?.lowercase().orEmpty()
+        val query = call.request.queryParameters["q"]
+            ?.trim()
+            ?.lowercase()
+            .orEmpty()
 
         lateinit var filtered: List<data.Task>
         val ms = timed {
-            filtered = TaskRepository.all().filter { it.title.lowercase().contains(query) }
+            filtered = TaskRepository.all()
+                .filter { it.title.lowercase().contains(query) }
         }
 
         Logger.success(
             sessionId = sessionId,
             requestId = reqId,
             taskCode = "T3_filter",
-            durationMs = ms,
+            ms = ms,
             jsMode = jsMode(call)
         )
 

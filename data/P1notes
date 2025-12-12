@@ -1,0 +1,42 @@
+User notes P1
+Date 11/12/25 
+Consent time: 18:50
+
+
+Task1: Add task
+Observation: The user sucessfully add task without error and was adding multiple task to the list.
+
+Success: Yes
+
+Feedback: The user gave feedback that the button was to wide and the button could not have been noticed easily.
+
+Task 3: Filter/ search task
+Observation: The user used the filter feature multiple time to double check on whether the action was successful rather tha just relying on the system conformation feedback.
+
+Success: Yes
+
+Feedback: The filter feature works fine and the user was satisfied with how it works.
+
+Task 4: Delete tasks
+Observation: The user was testing to delete all the task in the list so multiple delete actions were done consecutively in a short time.
+
+Success: Yes
+
+Feedback: The user said the accidentally deleted some of the task that was not meant to be deleted but there was no undo button.
+
+
+Metrics:
+2025-12-11T18:59:49.672521200Z,P1,r_41eacff4,T1_add,success,,4,200,on
+2025-12-11T19:00:12.594972800Z,P1,r_ae814bfb,T1_add,success,,2,200,on
+2025-12-11T19:00:26.080584300Z,P1,r_3b172945,T3_filter,success,,0,200,on
+2025-12-11T19:00:29.622616Z,P1,r_ef6f88bd,T3_filter,success,,0,200,on
+2025-12-11T19:00:35.000115200Z,P1,r_c14e8f7e,T2_delete,success,,1,200,on
+2025-12-11T19:00:36.033691700Z,P1,r_ac2fe1de,T2_delete,success,,1,200,on
+2025-12-11T19:00:36.957037Z,P1,r_1024b63f,T2_delete,success,,2,200,on
+2025-12-11T19:00:39.092734400Z,P1,r_75026412,T3_filter,success,,0,200,on
+2025-12-11T19:01:34.220162200Z,P1,r_fb6245d3,T1_add,success,,1,200,on
+2025-12-11T19:03:27.455414100Z,P1,r_96f7330d,T1_add,success,,6,200,on
+2025-12-11T19:03:34.046369900Z,P1,r_529295e7,T3_filter,success,,0,200,on
+2025-12-11T19:03:34.688798Z,P1,r_b85a0230,T2_delete,success,,2,200,on
+
+
